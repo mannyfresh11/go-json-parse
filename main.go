@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -27,20 +28,17 @@ func check(e error) {
 
 func main() {
 
-	conn := SshConnecting("manny", "192.168.1.101:22")
+	conn := NewSSHConnection("administrator", "servicerequest.dfci.harvard.edu:22")
 
-	session, err := conn.NewSession()
-	check(err)
-	var b bytes.Buffer
+	defer conn.Close()
 
-	session.Stdout = &b
+	sess, err := NewSession("cat /var/log/nginx/access.log", conn)
+	if err != nil {
+		log.Fatalf("Error from session is: %v\n", err)
+	}
+	defer sess.Close()
 
-	err = session.Run("/usr/bin/whoami")
-	check(err)
-
-	fmt.Println(b.String())
-
-	jsonFile, err := os.ReadFile("./jsonexample.log")
+	jsonFile, err := os.ReadFile("./json.log")
 	check(err)
 
 	buf := bytes.NewBuffer(jsonFile)
