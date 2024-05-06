@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -24,52 +25,32 @@ func check(e error) {
 	}
 }
 
-func (l *Logs) UnmarshalJSON(b []byte) error {
-	var fields []string
-	err := json.Unmarshal(b, &fields)
-	if err == nil {
-		*l = Logs{}
-		fields = append(fields, l.RemoteAddr)
-		fields = append(fields, l.RemoteUser)
-		fields = append(fields, l.Time)
-		fields = append(fields, l.Request)
-		fields = append(fields, l.Status)
-		fields = append(fields, l.BodyByte)
-		fields = append(fields, l.RequestTime)
-		fields = append(fields, l.HTTPRef)
-		fields = append(fields, l.HTTPUserAgent)
-		return nil
-	}
-	return nil
-}
-
 func main() {
-	//jsonFile, err := os.ReadFile("./jsonexample.log")
+
+	var logs Logs
+
 	jsonFile, err := os.ReadFile("./jsonexample.log")
 	check(err)
-	//fmt.Printf("this is what is inside jsonFile: %v\n", jsonFile)
 
-	// defer jsonFile.Close()
+	buf := bytes.NewBuffer(jsonFile)
+	dec := json.NewDecoder(buf)
 
-	var logs []*Logs
-	// data := make([]byte, 1024)
-	// _, err = jsonFile.Read(data)
-	// check(err)
-
-	//os.Stdout.Write(data)
-	err = json.Unmarshal(jsonFile, &logs)
-	check(err)
-
-	for _, log := range logs {
-		// fmt.Printf("this is what is inside logs: %v\n", logs[:count])
-		fmt.Printf("Request Address: %v\n", log.RemoteAddr)
-		fmt.Printf("Request User: %v\n", log.RemoteUser)
-		fmt.Printf("Time: %v\n", log.Time)
-		fmt.Printf("Requet: %v\n", log.Request)
-		fmt.Printf("Status: %v\n", log.Status)
-		fmt.Printf("Body byte sent: %v\n", log.BodyByte)
-		fmt.Printf("Request Time: %v\n", log.RequestTime)
-		fmt.Printf("Http Referrer: %v\n", log.HTTPRef)
-		fmt.Printf("Http User Agent: %v\n", log.HTTPUserAgent)
+	for {
+		if dec.More() == true {
+			dec.Decode(&logs)
+			fmt.Printf("Request Address: %v\n", logs.RemoteAddr)
+			fmt.Printf("Request User: %v\n", logs.RemoteUser)
+			fmt.Printf("Time: %v\n", logs.Time)
+			fmt.Printf("Requet: %v\n", logs.Request)
+			fmt.Printf("Status: %v\n", logs.Status)
+			fmt.Printf("Body byte sent: %v\n", logs.BodyByte)
+			fmt.Printf("Request Time: %v\n", logs.RequestTime)
+			fmt.Printf("Http Referrer: %v\n", logs.HTTPRef)
+			fmt.Printf("Http User Agent: %v\n\n", logs.HTTPUserAgent)
+			dec.More()
+		} else {
+			fmt.Printf("Done. \n\n")
+			break
+		}
 	}
 }
