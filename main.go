@@ -27,30 +27,24 @@ func check(e error) {
 
 func main() {
 
-	var logs Logs
-
 	jsonFile, err := os.ReadFile("./jsonexample.log")
 	check(err)
 
 	buf := bytes.NewBuffer(jsonFile)
 	dec := json.NewDecoder(buf)
 
-	for {
-		if dec.More() == true {
-			dec.Decode(&logs)
-			fmt.Printf("Request Address: %v\n", logs.RemoteAddr)
-			fmt.Printf("Request User: %v\n", logs.RemoteUser)
-			fmt.Printf("Time: %v\n", logs.Time)
-			fmt.Printf("Requet: %v\n", logs.Request)
-			fmt.Printf("Status: %v\n", logs.Status)
-			fmt.Printf("Body byte sent: %v\n", logs.BodyByte)
-			fmt.Printf("Request Time: %v\n", logs.RequestTime)
-			fmt.Printf("Http Referrer: %v\n", logs.HTTPRef)
-			fmt.Printf("Http User Agent: %v\n\n", logs.HTTPUserAgent)
-			dec.More()
-		} else {
-			fmt.Printf("Done. \n\n")
-			break
-		}
+	for dec.More() {
+		var logs Logs
+		err := dec.Decode(&logs)
+		check(err)
+		fmt.Printf("Request Address: %v\n", logs.RemoteAddr)
+		fmt.Printf("Request User: %v\n", logs.RemoteUser)
+		fmt.Printf("Time: %v\n", logs.Time)
+		fmt.Printf("Requet: %v\n", logs.Request)
+		fmt.Printf("Status: %v\n", logs.Status)
+		fmt.Printf("Body byte sent: %v\n", logs.BodyByte)
+		fmt.Printf("Request Time: %v\n", logs.RequestTime)
+		fmt.Printf("Http Referrer: %v\n", logs.HTTPRef)
+		fmt.Printf("Http User Agent: %v\n\n", logs.HTTPUserAgent)
 	}
 }
