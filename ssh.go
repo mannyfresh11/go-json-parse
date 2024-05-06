@@ -56,8 +56,10 @@ func NewSession(cmd string, conn *ssh.Client) (*ssh.Session, error) {
 	session.Stdout = &b
 
 	err = session.Run(cmd)
+	if err != nil {
+		log.Fatalf("Error running comand: %v\n", err)
+	}
 
-	//fmt.Println(b.String())
 	os.WriteFile("./json.log", b.Bytes(), 0666)
 
 	return session, err
