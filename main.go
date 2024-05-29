@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 )
@@ -29,15 +31,15 @@ func check(e error) {
 
 func main() {
 
-	// conn := NewSSHConnection("administrator", "servicerequest.dfci.harvard.edu:22")
+	conn := NewSSHConnection("administrator", "servicerequest.dfci.harvard.edu:22")
 
-	// defer conn.Close()
+	defer conn.Close()
 
-	// sess, err := NewSession("cat /var/log/nginx/access.log", conn)
-	// if err != nil {
-	// 	log.Fatalf("Error from session is: %v\n", err)
-	// }
-	// defer sess.Close()
+	sess, err := NewSession("cat /var/log/nginx/access.log", conn)
+	if err != nil {
+		log.Fatalf("Error from session is: %v\n", err)
+	}
+	defer sess.Close()
 
 	jsonFile, err := os.ReadFile("./json.log")
 	check(err)
@@ -48,17 +50,19 @@ func main() {
 	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
 
 	t := table.NewWriter()
-	t.AppendHeader(table.Row{"Remote Adress", "Remote User", "Date and Time", "Request", "Status", "Body Byte", "Request Time", "HTTP Ref", "HTTP User Agent"}, rowConfigAutoMerge)
+	t.AppendHeader(table.Row{"Remote Adress", "Remote User", "Date and Time", "Request", "Status", "Body Byte", "Request Time"}, rowConfigAutoMerge)
 	t.SetAutoIndex(true)
-	// t.SetColumnConfigs([]table.ColumnConfig{
-	// 	{Number: 1, AutoMerge: true},
-	// 	{Number: 2, AutoMerge: true},
-	// 	{Number: 3, AutoMerge: true},
-	// 	{Number: 4, AutoMerge: true},
-	// 	{Number: 5, AutoMerge: true},
-	// 	{Number: 6, AutoMerge: true},
-	// 	{Number: 7, AutoMerge: true},
-	// })
+	t.SetColumnConfigs([]table.ColumnConfig{
+		{Number: 1, AutoMerge: true},
+		// 	{Number: 2, AutoMerge: true},
+		{Number: 3, AutoMerge: true},
+		// 	{Number: 4, AutoMerge: true},
+		{Number: 5, AutoMerge: true},
+		// 	{Number: 6, AutoMerge: true},
+		//{Number: 7, AutoMerge: true},
+		//{Number: 8, AutoMerge: true},
+		//{Number: 9, AutoMerge: true},
+	})
 	t.SetStyle(table.StyleLight)
 	t.SetAllowedRowLength(250)
 	t.Style().Options.SeparateRows = true
@@ -69,7 +73,15 @@ func main() {
 		err := dec.Decode(&logs)
 		check(err)
 
-		t.AppendRow(table.Row{logs.RemoteAddr, logs.RemoteUser, logs.Time, logs.Request, logs.Status, logs.BodyByte, logs.RequestTime, logs.HTTPRef, logs.HTTPUserAgent}, rowConfigAutoMerge)
+		localTimeZN, err := time.LoadLocation("America/New_York")
+		check(err)
+
+		layout := "2006-01-02T15:04:05+00:00"
+
+		localTime, err := time.ParseInLocation(layout, logs.Time, localTimeZN)
+		check(err)
+
+		t.AppendRow(table.Row{logs.RemoteAddr, logs.RemoteUser, localTime, logs.Request, logs.Status, logs.BodyByte, logs.RequestTime}, rowConfigAutoMerge)
 		// fmt.Printf("Request Address: %v\n", logs.RemoteAddr)
 		// fmt.Printf("Request User: %v\n", logs.RemoteUser)
 		// fmt.Printf("Time: %v\n", logs.Time)
@@ -80,5 +92,7 @@ func main() {
 		// fmt.Printf("Http Referrer: %v\n", logs.HTTPRef)
 		// fmt.Printf("Http User Agent: %v\n\n", logs.HTTPUserAgent)
 	}
-	fmt.Println(t.Render())
+
+	os.WriteFile("./jsontable.log", []byte(t.Render()), 0666)
+	fmt.Println("Table created.")
 }
