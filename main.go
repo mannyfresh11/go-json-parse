@@ -11,6 +11,11 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
+var (
+	username = os.Getenv("REMOTE_USER")
+	hostname = os.Getenv("REMOTE_HOST")
+)
+
 type Logs struct {
 	Time          string `json:"time_local"`
 	RemoteAddr    string `json:"remote_addr"`
@@ -31,15 +36,14 @@ func check(e error) {
 
 func main() {
 
-	conn := NewSSHConnection("administrator", "servicerequest.dfci.harvard.edu:22")
+	conn := NewSSHConnection(username, hostname)
 
 	defer conn.Close()
 
-	sess, err := NewSession("cat /var/log/nginx/access.log", conn)
+	err := GetLogFile("cat /var/log/nginx/access.log", conn)
 	if err != nil {
 		log.Fatalf("Error from session is: %v\n", err)
 	}
-	defer sess.Close()
 
 	jsonFile, err := os.ReadFile("./json.log")
 	check(err)
@@ -64,9 +68,10 @@ func main() {
 		//{Number: 9, AutoMerge: true},
 	})
 	t.SetStyle(table.StyleLight)
-	t.SetAllowedRowLength(250)
+	t.SetAllowedRowLength(100)
 	t.Style().Options.SeparateRows = true
 
+	fmt.Println("Table creation started.")
 	for dec.More() {
 		var logs Logs
 
@@ -82,17 +87,8 @@ func main() {
 		check(err)
 
 		t.AppendRow(table.Row{logs.RemoteAddr, logs.RemoteUser, localTime, logs.Request, logs.Status, logs.BodyByte, logs.RequestTime}, rowConfigAutoMerge)
-		// fmt.Printf("Request Address: %v\n", logs.RemoteAddr)
-		// fmt.Printf("Request User: %v\n", logs.RemoteUser)
-		// fmt.Printf("Time: %v\n", logs.Time)
-		// fmt.Printf("Requet: %v\n", logs.Request)
-		// fmt.Printf("Status: %v\n", logs.Status)
-		// fmt.Printf("Body byte sent: %v\n", logs.BodyByte)
-		// fmt.Printf("Request Time: %v\n", logs.RequestTime)
-		// fmt.Printf("Http Referrer: %v\n", logs.HTTPRef)
-		// fmt.Printf("Http User Agent: %v\n\n", logs.HTTPUserAgent)
 	}
 
 	os.WriteFile("./jsontable.log", []byte(t.Render()), 0666)
-	fmt.Println("Table created.")
+	fmt.Println("Table creation finished.")
 }

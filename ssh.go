@@ -12,7 +12,12 @@ import (
 
 func NewSSHConnection(user, host string) *ssh.Client {
 
-	key, err := os.ReadFile("/home/manny/.ssh/id_ed25519")
+	hostPath, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Printf("Error reading homedir: %v\n", err)
+	}
+
+	key, err := os.ReadFile(hostPath + "/.ssh/id_ed25519")
 	if err != nil {
 		fmt.Printf("Error reading key: %v\n", err)
 	}
@@ -22,7 +27,7 @@ func NewSSHConnection(user, host string) *ssh.Client {
 		fmt.Printf("Error parsing private key: %v\n", err)
 	}
 
-	hostKeyCallback, err := knownhosts.New("/home/manny/.ssh/known_hosts")
+	hostKeyCallback, err := knownhosts.New(hostPath + "/.ssh/known_hosts")
 	if err != nil {
 		fmt.Printf("Error geting known host: %v\n", err)
 	}
@@ -44,11 +49,11 @@ func NewSSHConnection(user, host string) *ssh.Client {
 	return client
 }
 
-func NewSession(cmd string, conn *ssh.Client) (*ssh.Session, error) {
+func GetLogFile(cmd string, conn *ssh.Client) error {
 
 	session, err := conn.NewSession()
 	if err != nil {
-		log.Fatalf("Error occured creating session: %v\n", err)
+		return err
 	}
 
 	var b bytes.Buffer
@@ -57,10 +62,10 @@ func NewSession(cmd string, conn *ssh.Client) (*ssh.Session, error) {
 
 	err = session.Run(cmd)
 	if err != nil {
-		log.Fatalf("Error running comand: %v\n", err)
+		return err
 	}
 
 	os.WriteFile("./json.log", b.Bytes(), 0666)
 
-	return session, err
+	return nil
 }
