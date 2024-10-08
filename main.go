@@ -37,7 +37,6 @@ func check(e error) {
 func main() {
 
 	conn := NewSSHConnection(username, hostname)
-
 	defer conn.Close()
 
 	err := GetLogFile("cat /var/log/nginx/access.log", conn)
@@ -54,39 +53,49 @@ func main() {
 	rowConfigAutoMerge := table.RowConfig{AutoMerge: true}
 
 	t := table.NewWriter()
-	t.AppendHeader(table.Row{"Remote Adress", "Remote User", "Date and Time", "Request", "Status", "Body Byte", "Request Time"}, rowConfigAutoMerge)
+	t.AppendHeader(table.Row{
+		"Remote Adress",
+		"Date and Time",
+		"Request",
+		"Status",
+		"Body Byte"},
+		rowConfigAutoMerge)
 	t.SetAutoIndex(true)
 	t.SetColumnConfigs([]table.ColumnConfig{
 		{Number: 1, AutoMerge: true},
-		// 	{Number: 2, AutoMerge: true},
-		{Number: 3, AutoMerge: true},
-		// 	{Number: 4, AutoMerge: true},
+		{Number: 3, AutoMerge: true, WidthMax: 48},
 		{Number: 5, AutoMerge: true},
-		// 	{Number: 6, AutoMerge: true},
-		//{Number: 7, AutoMerge: true},
-		//{Number: 8, AutoMerge: true},
-		//{Number: 9, AutoMerge: true},
 	})
 	t.SetStyle(table.StyleLight)
-	t.SetAllowedRowLength(100)
+	t.SetAllowedRowLength(200)
 	t.Style().Options.SeparateRows = true
 
-	fmt.Println("Table creation started.")
+	layout := "2006-01-02T15:04:05+00:00"
+	localTimeZN, err := time.LoadLocation("America/New_York")
+	check(err)
+
+	var localTime time.Time
+
+	fmt.Println("Table creation started...")
 	for dec.More() {
 		var logs Logs
 
 		err := dec.Decode(&logs)
 		check(err)
 
-		localTimeZN, err := time.LoadLocation("America/New_York")
+		parseTime, err := time.Parse(layout, logs.Time)
 		check(err)
 
-		layout := "2006-01-02T15:04:05+00:00"
+		localTime = parseTime.In(localTimeZN)
+		formattedTime := localTime.Format("2006-01-02 15:04:05")
 
-		localTime, err := time.ParseInLocation(layout, logs.Time, localTimeZN)
-		check(err)
-
-		t.AppendRow(table.Row{logs.RemoteAddr, logs.RemoteUser, localTime, logs.Request, logs.Status, logs.BodyByte, logs.RequestTime}, rowConfigAutoMerge)
+		t.AppendRow(table.Row{
+			logs.RemoteAddr,
+			formattedTime,
+			logs.Request,
+			logs.Status,
+			logs.BodyByte},
+			rowConfigAutoMerge)
 	}
 
 	os.WriteFile("./jsontable.log", []byte(t.Render()), 0666)
